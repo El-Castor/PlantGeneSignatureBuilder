@@ -1,0 +1,64 @@
+# Minimal test configuration for smoke testing
+
+output_prefix: "test_signature"
+
+input_go_file: "tests/data/test_go_annotation.tsv"
+
+go_level_filter: "BP"
+
+id_mapping:
+  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
+  seurat_suffix: ".v1.2"
+
+scoring:
+  caps:
+    go_max: 15
+    domain_max: 10
+    orthology_max: 6
+    tair_max: 20
+    po_max: 4
+    synergy_max: 6
+  
+  weights:
+    go:
+      TEST:
+        "GO:0008219": 3  # cell death
+        "GO:0012501": 3  # programmed cell death
+    
+    domain_match:
+      hit: 2
+    
+    orthology:
+      best_hit_multiplier: 3
+      one_to_one_bonus: 2
+      min_best_score_for_points: 0.5
+    
+    tair_keywords:
+      hit: 2
+    
+    po_keywords:
+      hit: 1
+  
+  synergy_rules:
+    - name: "TEST_GO+domain"
+      if_all:
+        - "has_TEST_GO"
+        - "has_expected_domain"
+      bonus: 3
+
+domain_database:
+  enabled: false
+
+evidence:
+  orthology_evidence:
+    enabled: false
+  
+  arabidopsis_context:
+    enabled: false
+  
+  po_context:
+    enabled: false
+
+selection:
+  mode: "quantile"
+  quantile: 0.80

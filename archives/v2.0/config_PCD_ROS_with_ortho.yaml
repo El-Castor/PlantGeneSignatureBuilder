@@ -1,0 +1,59 @@
+# Configuration for PCD/ROS genes with orthology filtering
+# Tests v2.0 orthology filter without domain filtering
+
+output_prefix: "PCD_ROS_ortho"
+
+input_go_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/functionnal_annotation/fctionalAnno_Bd21-3_ownMethode/Bd21-3_v1.2/GOannotation.tsv"
+
+id_mapping:
+  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
+  seurat_suffix: ".v1.2"
+
+go_level_filter: "BP"
+
+go_terms:
+  - go_id: "GO:0012501"
+    description: "programmed cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0008219"
+    description: "cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0043067"
+    description: "regulation of programmed cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0010941"
+    description: "regulation of cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0006979"
+    description: "response to oxidative stress"
+    category: "ROS"
+  
+  - go_id: "GO:0072593"
+    description: "reactive oxygen species metabolic process"
+    category: "ROS"
+  
+  - go_id: "GO:0045454"
+    description: "cell redox homeostasis"
+    category: "ROS"
+
+filters:
+  domain_filter:
+    enabled: false
+  
+  orthology_filter:
+    enabled: true
+    orthology_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/Phytozome/PhytozomeV13/BdistachyonBd21-3/v1.2/orthology/inparanoid_BdistachyonBd21_3_537_v1.2/inParanoid_BdistachyonBd21_3_537_v1.2_Athaliana_447_Araport11.tsv"
+    require_arabidopsis_in_set: false
+    arabidopsis_pcd_gene_list: null
+    prefer_one_to_one: true
+    one_to_one_rule:
+      max_hits: 1
+      min_best_score: 0.8
+      min_second_best_gap: 0.2
+    mapping_rules:
+      brachy_id_regex_extract: "BdiBd21-3\\.\\dG\\d{7}"
+      arabidopsis_id_regex_extract: "AT[1-5MC]G\\d{5}"

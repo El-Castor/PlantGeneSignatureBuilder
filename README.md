@@ -1,20 +1,161 @@
-# GO Gene List Extraction Tool
+# Plant Gene Signature Builder
 
-A flexible Python script for extracting gene lists from Gene Ontology (GO) annotations based on user-defined GO terms.
+![Banner](assets/Banniere_PlantGeneSignatureBuilder.png)
 
-## Features
+<p align="center">
+  <img src="assets/Logo_PlantGeneSignatureBuilder_small.png" alt="PGSB Logo" width="200"/>
+</p>
 
-- **Configurable GO terms**: Define target GO terms in a separate YAML config file
-- **Flexible ID mapping**: Customizable regex patterns for protein-to-gene ID conversion
-- **GO level filtering**: Filter by Biological Process (BP), Molecular Function (MF), Cellular Component (CC), or all
-- **Detailed reporting**: Shows gene counts per GO term and extraction statistics
-- **Reusable**: Create multiple config files for different gene sets
+**A production-ready Python toolkit for building scientifically defensible gene signatures using multi-evidence scoring**
 
-## Requirements
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## Overview
+
+Plant Gene Signature Builder (PGSB) is a sophisticated pipeline for identifying and scoring candidate genes based on multiple independent evidence layers. Unlike simple GO-term extraction, PGSB integrates:
+
+- **Capped multi-evidence scoring** (prevents GO dominance)
+- **Synergy detection** (rewards convergent evidence)
+- **Arabidopsis orthology** with annotation enrichment
+- **Domain-based evidence** (Pfam/InterPro)
+- **Run management** for reproducible analyses
+- **QC diagnostics** and sensitivity analysis
+
+## Latest Version: v3.1 - Production Release
+
+### Key Features
+- ✅ **Scientifically defensible scoring**: Caps per evidence layer prevent any single source from dominating
+- ✅ **Run directory management**: Every analysis creates a unique, timestamped run with full traceability
+- ✅ **Enriched outputs**: Overview tables include Arabidopsis symbols, annotations, and evidence summaries
+- ✅ **Offline-only**: No web queries - fully reproducible with local resources
+- ✅ **QC diagnostics**: Automated plots and sensitivity analysis
+- ✅ **Production-ready**: Unit tests, manifest generation, SHA256 checksums
+
+### Output Structure
+
+Each run creates a complete directory:
+```
+results/
+  runs/
+    2026-01-29_000919__PCD_ROS_scored__5e7138e7__with_symbols/
+      config_used.yaml          # Snapshot of config
+      outputs/
+        *_genes.base.txt        # All candidate IDs
+        *_genes.scored.tsv      # Complete scoring table
+        *_genes.ALL_overview.tsv    # ⭐ Enriched table (all genes)
+        *_genes.HIGH_overview.tsv   # ⭐ Enriched table (high-confidence)
+        *_genes.high_confidence.txt # Selected IDs
+        *_genes.high_confidence.summary.txt
+        manifest.json           # File checksums & metadata
+      qc/                       # QC plots (with --qc flag)
+      logs/
+  latest -> runs/<most_recent>/  # Symlink to latest run
+```
+
+### What's in the Overview Tables?
+
+The `ALL_overview.tsv` and `HIGH_overview.tsv` files provide rich annotations:
+
+| Column | Description |
+|--------|-------------|
+| `brachy_gene_id` | Brachypodium gene ID (.v1.2) |
+| `total_score` | Final score (sum of capped layers) |
+| `go_score`, `domain_score`, `orth_score`, `tair_score`, `po_score` | Capped scores per layer |
+| `synergy_bonus` | Bonus for convergent evidence |
+| `go_terms` | Matched GO terms |
+| `domain_hits` | Matched protein domains |
+| `best_arabidopsis_id` | Top Arabidopsis ortholog (e.g., AT4G38360) |
+| `best_orth_score` | InParanoid confidence score |
+| `orth_class` | `one_to_one` / `one_to_many` / `none` |
+| `arabidopsis_hits` | All Arabidopsis orthologs |
+| `tair_symbol` | **Gene symbol** (e.g., LAZ1, EDS1) |
+| `tair_annotation` | **Full description** from Araport11 GFF3 |
+| `po_stage_hits` | Plant Ontology context matches |
+| `evidence_summary` | Human-readable summary (e.g., "PCD_GO; 1:1_AT4G38360") |
+
+**Example**: Gene `BdiBd21-3.1G0398400.v1.2` → Arabidopsis `AT4G38360` → Symbol `LAZ1` (LAZARUS 1)
+
+---
+
+## Versions
+
+### v3.1 (Current) - Production Multi-Evidence Scoring
+**Script**: `rank_gene_signatures.py`  
+**Features**:
+- Capped scoring system (go_max=15, domain_max=10, orthology_max=6, etc.)
+- Synergy bonuses when independent evidence agrees
+- Run directory management with config snapshots
+- Enriched overview tables with Arabidopsis symbols/annotations
+- Manifest generation with SHA256 checksums
+- QC plots and diagnostics
+- Unit tests (pytest)
+
+### v2.0 (Archived) - Binary Filtering
+**Script**: `build_pcd_list.py` (in `archives/v2.0/`)  
+**Note**: Removed 91% of genes through hard filters. Replaced by scoring approach.
+
+### v1.0 - GO Terms Only
+**Script**: `create_list_from_GAF.py`  
+**Use case**: Simple GO-based extraction for basic analyses
+
+---
+
+## Quick Start
+
+### Installation
 
 ```bash
-conda install -n wot_env pyyaml pandas
+# Clone repository
+git clone https://github.com/El-Castor/PlantGeneSignatureBuilder.git
+cd PlantGeneSignatureBuilder
+
+# Install dependencies
+conda create -n pgsb_env python=3.9 pandas numpy pyyaml matplotlib seaborn pytest -y
+conda activate pgsb_env
+
+# Or with pip
+pip install pandas numpy pyyaml matplotlib seaborn pytest
 ```
+
+### v3.1 - Production Multi-Evidence Scoring (Recommended)
+
+```bash
+# Basic run
+python rank_gene_signatures.py --config config_PCD_ROS_scoring.yaml
+
+# With QC diagnostics
+python rank_gene_signatures.py --config config_PCD_ROS_scoring.yaml --qc
+
+# With custom run name
+python rank_gene_signatures.py --config config_PCD_ROS_scoring.yaml --run_name my_analysis --qc
+
+# With conda environment
+conda run -n pgsb_env python rank_gene_signatures.py --config config_PCD_ROS_scoring.yaml --qc
+```
+
+**Outputs**: Check `results/latest/outputs/` for all files, including:
+- `*_ALL_overview.tsv` - Enriched table with Arabidopsis symbols/annotations
+- `*_HIGH_overview.tsv` - High-confidence genes with full annotations
+- `manifest.json` - File checksums and metadata
+
+### v1.0 - Simple GO Extraction
+
+```bash
+python create_list_from_GAF.py my_config.yaml
+```
+
+**Use case**: Quick GO-based gene lists without scoring
+
+---
+
+## Configuration
+
+### Scoring System (v3.1)
+
+The configuration file controls all aspects of scoring. Key sections:
 
 Or with pip:
 ```bash
@@ -207,6 +348,148 @@ Gene count by GO term:
 
 **Import error**:
 ```bash
+pip install pyyaml pandas numpy
+```
+
+---
+
+## Testing
+
+Run the test suite:
+
+```bash
+# Run all tests
+pytest tests/
+
+# Run specific test file
+pytest tests/test_run_manager.py
+
+# With verbose output
+pytest tests/ -v
+
+# Smoke test with minimal data
+pytest tests/test_smoke.py
+```
+
+---
+
+## Run Management & Reproducibility
+
+### Understanding Run Directories
+
+Every execution creates a unique run directory with deterministic naming:
+
+```
+2026-01-29_000919__PCD_ROS_scored__5e7138e7__with_symbols
+│
+├── Timestamp: 2026-01-29_000919
+├── Prefix: PCD_ROS_scored (from config)
+├── Hash: 5e7138e7 (SHA1 of config content)
+└── Custom: with_symbols (from --run_name flag)
+```
+
+This ensures:
+- **No output collisions** between different analyses
+- **Config traceability** via content hash
+- **Easy identification** via timestamp and custom name
+- **Reproducibility** via config snapshot
+
+### Accessing Results
+
+```bash
+# Latest run (via symlink)
+cat results/latest/outputs/*_HIGH_overview.tsv
+
+# Specific run
+cat results/runs/2026-01-29_000919__*/outputs/*_HIGH_overview.tsv
+
+# List all runs
+ls -lt results/runs/
+```
+
+### Manifest & Checksums
+
+Each run includes `manifest.json` with SHA256 checksums:
+
+```json
+{
+  "run_id": "2026-01-29_000919__PCD_ROS_scored__5e7138e7__with_symbols",
+  "created": "2026-01-29T00:09:19.123456",
+  "files": [
+    {
+      "path": "outputs/PCD_ROS_scored_genes.ALL_overview.tsv",
+      "description": "Enriched overview table for all genes",
+      "rows": 845,
+      "size_bytes": 93702,
+      "sha256": "cfce71f294f072ef6b8549c554787f7f6b6ba99b21f66ce20b7edfc4e6ceea9b"
+    }
+  ]
+}
+```
+
+---
+
+## Documentation
+
+- **Quick start**: See above
+- **v3.1 usage**: This README + `USER_GUIDE_v3_SCORING.md`
+- **v2.0 usage (archived)**: See `archives/v2.0/USER_GUIDE_v2.md`
+- **Architecture**: See `ARCHITECTURE_v3.md`
+- **Publication checklist**: See `PUBLICATION_CHECKLIST.md`
+- **Config templates**:
+  - v3.1: `config_scoring_caps_template.yaml`, `config_PCD_ROS_scoring.yaml`
+  - v1.0: `config_PCD_ROS.yaml`, `config_PCD_stress.yaml`
+  - Custom signatures: `config_custom/*.yaml`
+
+---
+
+## Citation
+
+If you use this tool in your research, please cite:
+
+```bibtex
+@software{pgsb2026,
+  author = {Your Name},
+  title = {Plant Gene Signature Builder: Multi-Evidence Scoring for Gene Signature Discovery},
+  year = {2026},
+  url = {https://github.com/El-Castor/PlantGeneSignatureBuilder},
+  version = {3.1.0}
+}
+```
+
+---
+
+## License
+
+MIT License - see LICENSE file for details
+
+---
+
+## Example Outputs
+
+### v3.1 Overview Tables
+```
+PCD_ROS_genes.txt              # Gene list with categories
+```
+
+### v2.0
+```
+PCD_ROS_ortho_genes.base.txt                  # After GO extraction
+PCD_ROS_ortho_genes.orthology_filtered.txt    # After orthology filter
+PCD_ROS_ortho_genes.final.txt                 # Final output
+PCD_ROS_ortho_orthology_filter_report.tsv     # Detailed report
+PCD_ROS_ortho_filtering_summary.txt           # Summary statistics
+```
+
+## Citation
+
+When using in publications, document all parameters used. See `PUBLICATION_CHECKLIST.md` for guidelines.
+
+## Repository
+
+https://github.com/El-Castor/PlantGeneSignatureBuilder
+
+## bash
 # Install PyYAML
 conda install -n wot_env pyyaml
 # or

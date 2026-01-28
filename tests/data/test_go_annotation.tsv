@@ -1,0 +1,13 @@
+gene	GO	Annotation	level
+BdiBd21-3.1G0001234.1.p	GO:0008219	cell death	BP
+BdiBd21-3.1G0001234.1.p	GO:0012501	programmed cell death	BP
+BdiBd21-3.1G0002345.1.p	GO:0008219	cell death	BP
+BdiBd21-3.1G0003456.1.p	GO:0012501	programmed cell death	BP
+BdiBd21-3.2G0004567.1.p	GO:0008219	cell death	BP
+BdiBd21-3.2G0004567.1.p	GO:0012501	programmed cell death	BP
+BdiBd21-3.2G0005678.1.p	GO:0012501	programmed cell death	BP
+BdiBd21-3.3G0006789.1.p	GO:0008219	cell death	BP
+BdiBd21-3.3G0007890.1.p	GO:0008219	cell death	BP
+BdiBd21-3.3G0007890.1.p	GO:0012501	programmed cell death	BP
+BdiBd21-3.4G0008901.1.p	GO:0012501	programmed cell death	BP
+BdiBd21-3.4G0009012.1.p	GO:0008219	cell death	BP

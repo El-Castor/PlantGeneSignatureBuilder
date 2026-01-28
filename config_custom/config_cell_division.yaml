@@ -1,0 +1,46 @@
+# Configuration file for Cell Division genes
+# Example config showing how to create a different gene set
+
+# Input/Output paths
+input_go_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/functionnal_annotation/fctionalAnno_Bd21-3_ownMethode/Bd21-3_v1.2/GOannotation.tsv"
+output_file: "cell_division_genes.txt"
+
+# Gene ID mapping
+gene_id_pattern: "^(BdiBd21-3\\.\\dG\\d{7})"
+gene_id_suffix: ".v1.2"
+
+# GO level filter
+go_level_filter: "BP"
+
+# Target GO terms for cell division and cell cycle
+go_terms:
+  # === Cell Division ===
+  - go_id: "GO:0051301"
+    description: "cell division"
+    category: "Division"
+  
+  - go_id: "GO:0000278"
+    description: "mitotic cell cycle"
+    category: "Division"
+  
+  - go_id: "GO:0007067"
+    description: "mitotic cell cycle"
+    category: "Division"
+  
+  # === Cell Cycle Regulation ===
+  - go_id: "GO:0007049"
+    description: "cell cycle"
+    category: "Cell_Cycle"
+  
+  - go_id: "GO:0051726"
+    description: "regulation of cell cycle"
+    category: "Cell_Cycle"
+  
+  # === Cytokinesis ===
+  - go_id: "GO:0000910"
+    description: "cytokinesis"
+    category: "Division"
+  
+  - go_id: "GO:0061640"
+    description: "cytoskeleton-dependent cytokinesis"
+    category: "Division"

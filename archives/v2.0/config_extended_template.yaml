@@ -1,0 +1,154 @@
+# Extended Configuration for Plant Gene Signature Builder v2.0
+# Includes optional domain and orthology filtering
+
+# ============================================================================
+# OUTPUT CONFIGURATION
+# ============================================================================
+output_prefix: "PCD_ROS"
+
+# ============================================================================
+# INPUT FILES
+# ============================================================================
+input_go_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/functionnal_annotation/fctionalAnno_Bd21-3_ownMethode/Bd21-3_v1.2/GOannotation.tsv"
+
+# ============================================================================
+# ID MAPPING RULES
+# ============================================================================
+id_mapping:
+  # Regex to extract core gene ID from protein ID
+  # Example: BdiBd21-3.3G0362100.1.p -> BdiBd21-3.3G0362100
+  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
+  
+  # Suffix to append for Seurat-compatible gene IDs
+  # Example: BdiBd21-3.3G0362100 -> BdiBd21-3.3G0362100.v1.2
+  seurat_suffix: ".v1.2"
+
+# ============================================================================
+# GO LEVEL FILTER
+# ============================================================================
+# Options: BP (Biological Process), MF (Molecular Function), CC (Cellular Component), or "all"
+go_level_filter: "BP"
+
+# ============================================================================
+# GO TERMS (Base Gene List)
+# ============================================================================
+go_terms:
+  # === Programmed Cell Death (PCD) ===
+  - go_id: "GO:0012501"
+    description: "programmed cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0008219"
+    description: "cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0043067"
+    description: "regulation of programmed cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0010941"
+    description: "regulation of cell death"
+    category: "PCD"
+  
+  # === Oxidative Stress & ROS ===
+  - go_id: "GO:0006979"
+    description: "response to oxidative stress"
+    category: "ROS"
+  
+  - go_id: "GO:0072593"
+    description: "reactive oxygen species metabolic process"
+    category: "ROS"
+  
+  - go_id: "GO:0045454"
+    description: "cell redox homeostasis"
+    category: "ROS"
+
+# ============================================================================
+# OPTIONAL FILTERS
+# ============================================================================
+filters:
+  
+  # --------------------------------------------------------------------------
+  # DOMAIN-BASED FILTERING
+  # Filter genes based on Pfam/InterPro domain annotations
+  # --------------------------------------------------------------------------
+  domain_filter:
+    enabled: false  # Set to true to activate
+    
+    # Path to domain annotation file (TSV format)
+    annotation_file: "/path/to/pfam_interpro_annotations.tsv"
+    
+    # Column name containing gene/protein IDs
+    id_column: "gene"
+    
+    # Column names containing domain IDs
+    domain_columns: ["pfam", "interpro"]
+    
+    # Allowed domains (user must provide these)
+    # Only genes with at least one of these domains will be kept
+    allowed_domains:
+      pfam:
+        - "PF00931"   # NB-ARC domain (plant disease resistance)
+        - "PF12613"   # Leucine-rich repeat (LRR)
+        # Add more Pfam IDs as needed
+      
+      interpro:
+        - "IPR002182"  # NB-ARC domain
+        - "IPR001611"  # Leucine-rich repeat
+        # Add more InterPro IDs as needed
+    
+    # Filtering mode
+    mode: "keep_if_any_match"  # Keep gene if ANY allowed domain is present
+  
+  # --------------------------------------------------------------------------
+  # ORTHOLOGY-BASED FILTERING
+  # Filter genes based on orthology to Arabidopsis
+  # --------------------------------------------------------------------------
+  orthology_filter:
+    enabled: false  # Set to true to activate
+    
+    # Path to orthology file (inParanoid format)
+    orthology_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/Phytozome/PhytozomeV13/BdistachyonBd21-3/v1.2/orthology/inparanoid_BdistachyonBd21_3_537_v1.2/inParanoid_BdistachyonBd21_3_537_v1.2_Athaliana_447_Araport11.tsv"
+    
+    # Require Arabidopsis orthologue to be in reference gene set?
+    # If true, must provide arabidopsis_pcd_gene_list
+    require_arabidopsis_in_set: false
+    
+    # Optional: List of Arabidopsis genes (one per line)
+    # Only keep Brachypodium genes if their Arabidopsis orthologue is in this list
+    arabidopsis_pcd_gene_list: null  # "/path/to/arabidopsis_pcd_genes.txt"
+    
+    # Prefer one-to-one orthologues?
+    # If true, filter out one-to-many relationships
+    prefer_one_to_one: true
+    
+    # Rules for classifying one-to-one orthology
+    one_to_one_rule:
+      max_hits: 1              # Maximum number of Arabidopsis hits for 1:1
+      min_best_score: 0.8      # Minimum score for best hit
+      min_second_best_gap: 0.2 # Minimum gap between best and 2nd best (if 2nd exists)
+    
+    # ID extraction regex patterns
+    mapping_rules:
+      brachy_id_regex_extract: "BdiBd21-3\\.\\dG\\d{7}"
+      arabidopsis_id_regex_extract: "AT[1-5MC]G\\d{5}"
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# 
+# Pipeline stages (in order):
+# 1. Base extraction: GO terms -> base gene list
+# 2. Domain filter (if enabled): Keep genes with allowed domains
+# 3. Orthology filter (if enabled): Keep genes with valid Arabidopsis orthologues
+# 4. Final output
+#
+# Outputs generated:
+# - <prefix>_genes.base.txt              (always)
+# - <prefix>_genes.domain_filtered.txt   (if domain filter enabled)
+# - <prefix>_genes.orthology_filtered.txt (if orthology filter enabled)
+# - <prefix>_genes.final.txt             (always - final result)
+# - <prefix>_domain_filter_report.tsv    (if domain filter enabled)
+# - <prefix>_orthology_filter_report.tsv (if orthology filter enabled)
+# - <prefix>_filtering_summary.txt       (always)
+#

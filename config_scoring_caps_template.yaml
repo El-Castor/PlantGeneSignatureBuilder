@@ -1,0 +1,173 @@
+# =============================================================================
+# Plant Gene Signature Ranker - CONFIG TEMPLATE v3.1
+# Scientifically Defensible Scoring with Caps + Synergy Bonuses
+# =============================================================================
+
+# --- Input Files (REQUIRED) ---
+input_go_file: "GOannotation.tsv"
+
+# --- Gene ID Mapping ---
+id_mapping:
+  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
+  seurat_suffix: ".v1.2"
+
+# --- GO Level Filter ---
+go_level_filter: "BP"  # BP, MF, CC, or ALL
+
+# --- Output Prefix ---
+output_prefix: "my_signature"
+
+# =============================================================================
+# SCORING CONFIGURATION - CAPS + WEIGHTS + SYNERGY
+# =============================================================================
+scoring:
+  
+  # --- CAPS (prevent dominance of any single layer) ---
+  # These are HARD LIMITS per evidence layer
+  caps:
+    go_max: 15           # Max points from GO terms (prevents GO dominance)
+    domain_max: 10       # Max points from domain matches
+    orthology_max: 6     # Max points from orthology evidence
+    tair_max: 20         # Max points from Arabidopsis keyword matches
+    po_max: 4            # Max points from PO context
+    synergy_max: 6       # Max points from synergy bonuses
+  
+  # --- WEIGHTS (how to score within each layer) ---
+  weights:
+    
+    # GO term weights by category
+    go:
+      PCD:
+        "GO:0012501": 3  # programmed cell death
+        "GO:0010343": 2  # cell death induced by cell wall
+        "GO:0034050": 2  # host programmed cell death
+      ROS:
+        "GO:0042542": 2  # response to hydrogen peroxide
+        "GO:0000302": 3  # response to reactive oxygen species
+      # Add more categories as needed
+    
+    # Domain matches
+    domain_match:
+      hit: 2  # Points per expected domain match
+    
+    # Orthology scoring
+    orthology:
+      best_hit_multiplier: 3        # Multiply best InParanoid score by this
+      one_to_one_bonus: 2           # Extra points if orthology is one-to-one
+      min_best_score_for_points: 0.5  # Only score if confidence >= this
+    
+    # Arabidopsis keyword matches
+    tair_keywords:
+      hit: 2  # Points per keyword match in annotation
+    
+    # PO context matches
+    po_keywords:
+      hit: 1  # Points per PO senescence/death context match
+  
+  # --- SYNERGY RULES (bonus when independent evidence agrees) ---
+  # Rewards convergent evidence from different sources
+  synergy_rules:
+    - name: "PCD_GO+domain"
+      if_all:
+        - "has_PCD_GO"
+        - "has_expected_domain"
+      bonus: 3
+    
+    - name: "PCD_GO+TAIR_keywords"
+      if_all:
+        - "has_PCD_GO"
+        - "tair_keyword_hits>=1"
+      bonus: 2
+    
+    - name: "domain+TAIR_keywords"
+      if_all:
+        - "has_expected_domain"
+        - "tair_keyword_hits>=1"
+      bonus: 2
+
+# =============================================================================
+# DOMAIN DATABASE (optional but recommended)
+# =============================================================================
+domain_database:
+  enabled: true
+  
+  annotation_files:
+    - path: "resources/domains/Brachy_Pfam_annotations.tsv"
+      database: "Pfam"
+      id_column: "gene_id"
+      domain_columns:
+        - "pfam_id"
+        - "pfam_name"
+    
+    - path: "resources/domains/Brachy_InterPro_annotations.tsv"
+      database: "InterPro"
+      id_column: "protein_id"
+      domain_columns:
+        - "interpro_id"
+        - "interpro_description"
+  
+  # Expected domains (used for synergy detection)
+  expected_domains:
+    Pfam:
+      - "PF00931"  # NB-ARC domain (plant immunity)
+      - "PF01582"  # TIR domain
+    InterPro:
+      - "IPR002182"  # NB-ARC
+      - "IPR000157"  # Toll-Interleukin receptor
+
+# =============================================================================
+# EVIDENCE LAYERS
+# =============================================================================
+evidence:
+  
+  # --- Orthology Evidence ---
+  orthology_evidence:
+    enabled: true
+    orthology_file: "inparanoid/sqltable.BdiBd21-3-A.thaliana.txt"
+    
+    mapping_rules:
+      brachy_id_regex_extract: "BdiBd21-3\\.\\dG\\d{7}"
+      arabidopsis_id_regex_extract: "AT[1-5MC]G\\d{5}"
+  
+  # --- Arabidopsis Context (keywords + PO) ---
+  arabidopsis_context:
+    enabled: true
+    
+    # GFF3 for gene symbols and annotations (OFFLINE)
+    gff3_file: "resources/arabidopsis/Araport11_TAIR10.1_symbol_description.gff3"
+    
+    # PO annotations for senescence/death context (OFFLINE)
+    po_annotation_file: "resources/arabidopsis/Arabidopsis_annotation.txt"
+    
+    # Keywords to search in Arabidopsis annotations
+    keywords:
+      - "programmed cell death"
+      - "apoptosis"
+      - "senescence"
+      - "hypersensitive"
+      - "necrosis"
+      - "oxidative stress"
+      - "reactive oxygen"
+      - "ROS"
+  
+  # --- PO Context ---
+  po_context:
+    enabled: true
+    # Uses same po_annotation_file as above
+
+# =============================================================================
+# SELECTION METHOD
+# =============================================================================
+selection:
+  mode: "knee"  # or "quantile"
+  quantile: 0.90  # if mode=quantile, select top 10%
+
+# =============================================================================
+# QC DIAGNOSTICS (optional)
+# Enable with: python rank_gene_signatures.py --config config.yaml --qc
+# =============================================================================
+# Generates:
+# - results/qc/<prefix>_go_vs_domain.png
+# - results/qc/<prefix>_total_vs_go.png
+# - results/qc/<prefix>_score_distribution.png
+# - results/qc/<prefix>_qc_summary.txt

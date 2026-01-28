@@ -27,3 +27,9 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Large resource files (download separately)
+resources/arabidopsis/*.gff
+resources/arabidopsis/*.gff3
+!resources/arabidopsis/README.md
+!resources/arabidopsis/*.txt

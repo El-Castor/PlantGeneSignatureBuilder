@@ -1,0 +1,46 @@
+# Configuration file for Photosynthesis genes
+# Example config for extracting photosynthesis-related genes
+
+# Input/Output paths
+input_go_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/functionnal_annotation/fctionalAnno_Bd21-3_ownMethode/Bd21-3_v1.2/GOannotation.tsv"
+output_file: "photosynthesis_genes.txt"
+
+# Gene ID mapping
+gene_id_pattern: "^(BdiBd21-3\\.\\dG\\d{7})"
+gene_id_suffix: ".v1.2"
+
+# GO level filter
+go_level_filter: "BP"
+
+# Target GO terms for photosynthesis
+go_terms:
+  # === Core Photosynthesis ===
+  - go_id: "GO:0015979"
+    description: "photosynthesis"
+    category: "Photosynthesis"
+  
+  - go_id: "GO:0019684"
+    description: "photosynthesis, light reaction"
+    category: "Light_Reaction"
+  
+  - go_id: "GO:0009765"
+    description: "photosynthesis, light harvesting"
+    category: "Light_Reaction"
+  
+  # === Dark Reaction / Calvin Cycle ===
+  - go_id: "GO:0019685"
+    description: "photosynthesis, dark reaction"
+    category: "Dark_Reaction"
+  
+  - go_id: "GO:0009710"
+    description: "carbon utilization"
+    category: "Carbon_Fixation"
+  
+  # === Chloroplast-related ===
+  - go_id: "GO:0009658"
+    description: "chloroplast organization"
+    category: "Chloroplast"
+  
+  - go_id: "GO:0010027"
+    description: "thylakoid membrane organization"
+    category: "Chloroplast"

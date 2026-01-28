@@ -1,0 +1,158 @@
+# =============================================================================
+# PCD/ROS Gene Signature - Capped Multi-Evidence Scoring v3.1
+# =============================================================================
+
+output_prefix: "PCD_ROS_scored"
+
+input_go_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/functionnal_annotation/fctionalAnno_Bd21-3_ownMethode/Bd21-3_v1.2/GOannotation.tsv"
+
+go_level_filter: "BP"
+
+id_mapping:
+  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
+  seurat_suffix: ".v1.2"
+
+# =============================================================================
+# SCORING CONFIGURATION - CAPS + WEIGHTS + SYNERGY
+# =============================================================================
+scoring:
+  
+  # --- CAPS (prevent dominance of any single layer) ---
+  caps:
+    go_max: 15           # Max points from GO terms (prevents GO dominance)
+    domain_max: 10       # Max points from domain matches
+    orthology_max: 6     # Max points from orthology evidence
+    tair_max: 20         # Max points from Arabidopsis keyword matches
+    po_max: 4            # Max points from PO context
+    synergy_max: 6       # Max points from synergy bonuses
+  
+  # --- WEIGHTS (how to score within each layer) ---
+  weights:
+    
+    # GO term weights by category
+    go:
+      PCD:
+        "GO:0012501": 3  # programmed cell death
+        "GO:0008219": 3  # cell death
+        "GO:0010343": 2  # cell death induced by cell wall
+        "GO:0034050": 2  # host programmed cell death induced by symbiont
+        "GO:0034052": 2  # positive regulation of plant-type hypersensitive response
+        "GO:0010200": 3  # response to chitin (PTI → often PCD)
+        "GO:0009626": 2  # plant-type hypersensitive response
+        "GO:0009411": 2  # response to UV
+        "GO:0043067": 2  # regulation of programmed cell death
+        "GO:0010941": 2  # regulation of cell death
+      
+      ROS:
+        "GO:0042542": 2  # response to hydrogen peroxide
+        "GO:0000302": 3  # response to reactive oxygen species
+        "GO:0010310": 2  # regulation of hydrogen peroxide metabolic process
+        "GO:0006979": 2  # response to oxidative stress
+        "GO:0009408": 2  # response to heat
+        "GO:0071456": 2  # cellular response to hypoxia
+        "GO:0072593": 2  # reactive oxygen species metabolic process
+        "GO:0045454": 2  # cell redox homeostasis
+    
+    # Domain matches (currently disabled - no domain file)
+    domain_match:
+      hit: 2  # Points per expected domain match
+    
+    # Orthology scoring
+    orthology:
+      best_hit_multiplier: 3        # Multiply best InParanoid score by this
+      one_to_one_bonus: 2           # Extra points if orthology is one-to-one
+      min_best_score_for_points: 0.5  # Only score if confidence >= this
+    
+    # Arabidopsis keyword matches (currently disabled)
+    tair_keywords:
+      hit: 2  # Points per keyword match in annotation
+    
+    # PO context matches (currently disabled)
+    po_keywords:
+      hit: 1  # Points per PO senescence/death context match
+  
+  # --- SYNERGY RULES (bonus when independent evidence agrees) ---
+  synergy_rules:
+    - name: "PCD_GO+domain"
+      if_all:
+        - "has_PCD_GO"
+        - "has_expected_domain"
+      bonus: 3
+    
+    - name: "PCD_GO+TAIR_keywords"
+      if_all:
+        - "has_PCD_GO"
+        - "tair_keyword_hits>=1"
+      bonus: 2
+    
+    - name: "domain+TAIR_keywords"
+      if_all:
+        - "has_expected_domain"
+        - "tair_keyword_hits>=1"
+      bonus: 2
+
+# =============================================================================
+# DOMAIN DATABASE (currently disabled - awaiting domain annotation file)
+# =============================================================================
+domain_database:
+  enabled: false
+  
+  # When enabled, configure like this:
+  # annotation_files:
+  #   - path: "resources/domains/Brachy_Pfam_annotations.tsv"
+  #     database: "Pfam"
+  #     id_column: "gene_id"
+  #     domain_columns:
+  #       - "pfam_id"
+  #       - "pfam_name"
+  
+  # expected_domains:
+  #   Pfam:
+  #     - "PF00931"  # NB-ARC domain (plant immunity)
+  #     - "PF01582"  # TIR domain
+
+# =============================================================================
+# EVIDENCE LAYERS
+# =============================================================================
+evidence:
+  
+  # --- Orthology Evidence (ENABLED) ---
+  orthology_evidence:
+    enabled: true
+    orthology_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/Phytozome/PhytozomeV13/BdistachyonBd21-3/v1.2/orthology/inparanoid_BdistachyonBd21_3_537_v1.2/inParanoid_BdistachyonBd21_3_537_v1.2_Athaliana_447_Araport11.tsv"
+    
+    mapping_rules:
+      brachy_id_regex_extract: "BdiBd21-3\\.\\dG\\d{7}"
+      arabidopsis_id_regex_extract: "AT[1-5MC]G\\d{5}"
+  
+  # --- Arabidopsis Context (for symbol/annotation enrichment) ---
+  arabidopsis_context:
+    enabled: false  # Keyword scoring disabled, but GFF3 loaded for symbol enrichment
+    
+    # GFF3 file for gene symbols and annotations (loaded when orthology enabled)
+    gff3_file: "resources/arabidopsis/Araport11_GFF3_genes_transposons.20250813.gff"
+    
+    # PO annotation file (optional)
+    po_annotation_file: "resources/arabidopsis/Arabidopsis_annotation_gene.txt"
+    
+    # Keywords for scoring (only used if enabled: true)
+    keywords:
+      - "programmed cell death"
+      - "apoptosis"
+      - "senescence"
+      - "hypersensitive"
+      - "necrosis"
+      - "oxidative stress"
+      - "reactive oxygen"
+      - "ROS"
+  
+  # --- PO Context (DISABLED - awaiting PO file) ---
+  po_context:
+    enabled: false
+
+# =============================================================================
+# SELECTION METHOD
+# =============================================================================
+selection:
+  mode: "quantile"
+  quantile: 0.90  # Select top 10% genes
