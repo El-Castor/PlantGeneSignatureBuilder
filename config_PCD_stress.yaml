@@ -1,0 +1,69 @@
+# Configuration file for GO term extraction
+# This file defines which GO terms to extract from the annotation file
+
+# Input/Output paths
+input_go_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/functionnal_annotation/fctionalAnno_Bd21-3_ownMethode/Bd21-3_v1.2/GOannotation.tsv"
+output_file: "PCD_WOT_genes.txt"
+
+# Gene ID mapping
+# Pattern to extract core gene ID from protein ID
+# Example: BdiBd21-3.3G0362100.1.p -> BdiBd21-3.3G0362100
+gene_id_pattern: "^(BdiBd21-3\\.\\dG\\d{7})"
+
+# Suffix to append to create Seurat-compatible gene IDs
+# Example: BdiBd21-3.3G0362100 -> BdiBd21-3.3G0362100.v1.2
+gene_id_suffix: ".v1.2"
+
+# GO level filter (BP, MF, CC, or "all" for no filtering)
+# BP = Biological Process, MF = Molecular Function, CC = Cellular Component
+go_level_filter: "BP"
+
+# Target GO terms to extract
+# Each entry should have:
+#   go_id: GO identifier (GO:XXXXXXX)
+#   description: Human-readable description (for documentation)
+#   category: Optional category for grouping (e.g., PCD, Stress, ROS)
+
+go_terms:
+  # === Programmed Cell Death (PCD) ===
+  - go_id: "GO:0012501"
+    description: "programmed cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0008219"
+    description: "cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0043067"
+    description: "regulation of programmed cell death"
+    category: "PCD"
+  
+  - go_id: "GO:0010941"
+    description: "regulation of cell death"
+    category: "PCD"
+  
+  # === Oxidative Stress & ROS ===
+  - go_id: "GO:0006979"
+    description: "response to oxidative stress"
+    category: "Stress"
+  
+  - go_id: "GO:0072593"
+    description: "reactive oxygen species metabolic process"
+    category: "ROS"
+  
+  - go_id: "GO:0045454"
+    description: "cell redox homeostasis"
+    category: "ROS"
+  
+  # === General Stress Responses ===
+  - go_id: "GO:0033554"
+    description: "cellular response to stress"
+    category: "Stress"
+  
+  - go_id: "GO:0006950"
+    description: "response to stress"
+    category: "Stress"
+  
+  - go_id: "GO:0009628"
+    description: "response to abiotic stimulus"
+    category: "Stress"
