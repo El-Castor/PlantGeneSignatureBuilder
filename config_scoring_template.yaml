@@ -1,0 +1,175 @@
+# ==============================================================================
+# Plant Gene Signature Scoring Configuration Template
+# ==============================================================================
+# This configuration drives a multi-evidence scoring system for ranking genes.
+# NO GENES ARE FILTERED OUT - all GO-matched genes are retained and scored.
+#
+# Usage:
+#   python rank_gene_signatures.py --config config_scoring.yaml
+
+# Output file prefix (generates <prefix>_genes.base.txt, .scored.tsv, .high_confidence.txt)
+output_prefix: "PCD_ROS"
+
+# GO annotation input
+input_go_file: "/path/to/GOannotation.tsv"
+# Expected columns: gene (protein ID), GO (GO:xxxxxxx), level (BP/MF/CC)
+
+# GO level filter (BP, MF, CC, or ALL)
+go_level_filter: "BP"
+
+# ID mapping rules
+id_mapping:
+  # Regex to extract core gene ID from protein ID
+  # Example: "BdiBd21-3.3G0362100.1.p" -> "BdiBd21-3.3G0362100"
+  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
+  
+  # Suffix for Seurat gene ID
+  # Example: "BdiBd21-3.3G0362100" + ".v1.2" -> "BdiBd21-3.3G0362100.v1.2"
+  seurat_suffix: ".v1.2"
+
+# ==============================================================================
+# SCORE WEIGHTS
+# ==============================================================================
+# Configure how each evidence layer contributes to the total score.
+# Higher weights = more important evidence.
+
+score_weights:
+  
+  # GO term weights - Core PCD terms (highest weight)
+  go_core_terms:
+    GO:0012501: 3    # programmed cell death
+    GO:0008219: 3    # cell death
+    GO:0043067: 2    # regulation of programmed cell death
+    GO:0010941: 2    # regulation of cell death
+  
+  # GO term weights - ROS-related terms (medium weight)
+  go_ros_terms:
+    GO:0006979: 2    # response to oxidative stress
+    GO:0072593: 2    # reactive oxygen species metabolic process
+    GO:0045454: 2    # cell redox homeostasis
+  
+  # GO term weights - General stress terms (optional, lower weight)
+  go_stress_terms:
+    GO:0009408: 1    # response to heat
+    GO:0009409: 1    # response to cold
+    GO:0042542: 1    # response to hydrogen peroxide
+  
+  # Domain evidence weights
+  domain_match:
+    pfam: 3          # Pfam domain match
+    interpro: 3      # InterPro domain match
+  
+  # Orthology evidence weights
+  orthology:
+    best_hit_score_multiplier: 3    # Multiply best ortholog score by this value
+    one_to_one_bonus: 2              # Extra points for 1:1 orthology
+  
+  # TAIR keyword weights
+  tair_keywords:
+    keyword_hit: 1          # Points per keyword match
+    max_keyword_points: 6   # Cap on total keyword points
+
+# ==============================================================================
+# EVIDENCE LAYERS
+# ==============================================================================
+
+evidence:
+  
+  # ------------------------------------------------------------------------
+  # Domain Evidence (Pfam/InterPro)
+  # ------------------------------------------------------------------------
+  domain_evidence:
+    enabled: false
+    
+    # Path to domain annotation file
+    annotation_file: "/path/to/domain_annotations.tsv"
+    
+    # Column containing gene/protein ID
+    id_column: "gene"
+    
+    # Columns containing domain annotations
+    domain_columns:
+      - "pfam"
+      - "interpro"
+    
+    # Allowed domains (mechanistically relevant to PCD/ROS)
+    allowed_domains:
+      pfam:
+        - "PF00656"   # Caspase domain
+        - "PF14743"   # Metacaspase
+        - "PF00112"   # Papain family cysteine protease
+        - "PF00141"   # Peroxidase
+        - "PF13460"   # NADPH oxidase
+      
+      interpro:
+        - "IPR029058"  # Caspase-like
+        - "IPR011600"  # Autophagy protein
+        - "IPR002016"  # Peroxidase
+    
+    # Optional: cap domain score (prevents single gene with many domains from dominating)
+    max_domain_score: 12
+  
+  # ------------------------------------------------------------------------
+  # Orthology Evidence (Arabidopsis)
+  # ------------------------------------------------------------------------
+  orthology_evidence:
+    enabled: false
+    
+    # Path to orthology file (inParanoid format)
+    orthology_file: "/path/to/orthology.tsv"
+    # Expected columns: OrtoA (Brachypodium), OrtoB (Arabidopsis)
+    # Format: "species:gene_id score species:gene_id score ..."
+    
+    # Mapping rules
+    mapping_rules:
+      brachy_id_regex_extract: "BdiBd21-3\\.\\dG\\d{7}"
+      arabidopsis_id_regex_extract: "AT[1-5MC]G\\d{5}"
+  
+  # ------------------------------------------------------------------------
+  # TAIR Keyword Evidence
+  # ------------------------------------------------------------------------
+  tair_keywords:
+    enabled: false
+    
+    # Mode: "offline" (user-provided mapping) or "online" (fetch from TAIR)
+    mode: "offline"
+    
+    # Offline mode: path to TAIR gene annotation file
+    # Expected columns: gene_id (or locus), symbol (or gene_symbol), description (or gene_description)
+    mapping_file: "/path/to/tair_annotations.tsv"
+    
+    # Keywords to search in symbol + description
+    keywords:
+      - "cell death"
+      - "PCD"
+      - "programmed cell death"
+      - "metacaspase"
+      - "senescence"
+      - "autophagy"
+      - "hypersensitive"
+      - "ROS"
+      - "oxidative"
+      - "redox"
+      - "peroxidase"
+      - "cysteine protease"
+      - "protease"
+      - "caspase-like"
+
+# ==============================================================================
+# SELECTION STRATEGY
+# ==============================================================================
+# How to select high-confidence genes from scored list
+
+selection:
+  
+  # Mode: "quantile" or "knee"
+  mode: "quantile"
+  
+  # ---- Quantile mode ----
+  # Select top X percentile of genes by score
+  quantile: 0.90    # Top 10% of genes (90th percentile threshold)
+  
+  # ---- Knee mode ----
+  # Automatically detect "knee" in score distribution
+  # min_genes: 150    # Minimum number of genes to select
+  # max_genes: 350    # Maximum number of genes to select

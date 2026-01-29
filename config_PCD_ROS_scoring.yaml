@@ -92,24 +92,42 @@ scoring:
       bonus: 2
 
 # =============================================================================
-# DOMAIN DATABASE (currently disabled - awaiting domain annotation file)
+# DOMAIN DATABASE (Pfam domain scanning with hmmscan)
 # =============================================================================
 domain_database:
-  enabled: false
+  enabled: true
   
-  # When enabled, configure like this:
-  # annotation_files:
-  #   - path: "resources/domains/Brachy_Pfam_annotations.tsv"
-  #     database: "Pfam"
-  #     id_column: "gene_id"
-  #     domain_columns:
-  #       - "pfam_id"
-  #       - "pfam_name"
+  # Pfam database and protein sequences
+  pfam_database: "resources/domains/pfam/Pfam-A.hmm"
+  protein_fasta: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/Phytozome/PhytozomeV13/BdistachyonBd21-3/v1.2/annotation/BdistachyonBd21_3_537_v1.2.protein.fa"
   
-  # expected_domains:
-  #   Pfam:
-  #     - "PF00931"  # NB-ARC domain (plant immunity)
-  #     - "PF01582"  # TIR domain
+  # hmmscan parameters
+  evalue_threshold: 1e-5
+  cpu: 4
+  
+  # Expected domains per category (Pfam IDs without version)
+  expected_domains:
+    PCD:
+      - "PF00656"  # ICE-like protease (caspase/metacaspase domain)
+      - "PF00931"  # NB-ARC domain (plant immunity, R genes)
+      - "PF01582"  # TIR domain (pathogen recognition, cell death signaling)
+      - "PF12799"  # LRR_4 (leucine-rich repeat, R genes)
+      - "PF13855"  # LRR_8 (leucine-rich repeat)
+      - "PF00069"  # Protein kinase domain (signaling)
+      - "PF07714"  # Protein tyrosine kinase
+      - "PF14903"  # NACHT domain (NLR immunity)
+    
+    ROS:
+      - "PF00141"  # Peroxidase (ROS scavenging)
+      - "PF00199"  # Catalase (ROS scavenging)
+      - "PF00067"  # Cytochrome P450 (oxidation)
+      - "PF01764"  # Lipase_GDSL (lipid peroxidation)
+      - "PF08030"  # Ferric_reduct (ferric reductase, oxidative stress)
+      - "PF00355"  # Rieske (iron-sulfur cluster, electron transport)
+      - "PF00890"  # FAD_binding_2 (oxidoreductase)
+      - "PF01494"  # FAD_binding_3 (NADPH oxidase)
+      - "PF06174"  # Zip_Zn (zinc transport, oxidative stress)
+      - "PF00107"  # ADH_zinc_N (zinc-binding dehydrogenase)
 
 # =============================================================================
 # EVIDENCE LAYERS

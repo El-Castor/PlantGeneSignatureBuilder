@@ -33,3 +33,21 @@ resources/arabidopsis/*.gff
 resources/arabidopsis/*.gff3
 !resources/arabidopsis/README.md
 !resources/arabidopsis/*.txt
+
+# Pfam database files (too large for git)
+resources/domains/pfam/*.hmm
+resources/domains/pfam/*.hmm.gz
+resources/domains/pfam/*.h3m
+resources/domains/pfam/*.h3i
+resources/domains/pfam/*.h3f
+resources/domains/pfam/*.h3p
+!resources/domains/README.md
+
+# Domain analysis temporary files
+*.domtbl
+*_extract.fa
+*_protein.fa
+domain_*.log
+
+# Results and run outputs
+results/

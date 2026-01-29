@@ -371,65 +371,100 @@ class GeneSignatureRanker:
         return po_context
     
     def _score_domain_evidence(self, genes):
-        """Score domain evidence with cap"""
-        domain_config = self.config['domain_database']
-        annotation_files = domain_config.get('annotation_files', [])
+        """Score domain evidence using hmmscan with cap"""
+        from pgsb.domains import DomainScanner, parse_domtbl
         
-        if not annotation_files:
-            print("  No annotation files specified")
+        domain_config = self.config['domain_database']
+        
+        # Get configuration
+        pfam_db = domain_config.get('pfam_database')
+        protein_fasta = domain_config.get('protein_fasta')
+        evalue = domain_config.get('evalue_threshold', 1e-5)
+        cpu = domain_config.get('cpu', 4)
+        
+        if not pfam_db or not protein_fasta:
+            print("  ERROR: pfam_database and protein_fasta required in config")
             return
         
+        if not Path(pfam_db).exists():
+            print(f"  WARNING: Pfam database not found: {pfam_db}")
+            return
+        
+        if not Path(protein_fasta).exists():
+            print(f"  WARNING: Protein FASTA not found: {protein_fasta}")
+            return
+        
+        # Get expected domains per category
+        expected_domains_config = domain_config.get('expected_domains', {})
+        
+        # Determine category for each gene from GO terms
+        gene_categories = self._categorize_genes(genes)
+        
+        # Initialize scanner
+        try:
+            scanner = DomainScanner(pfam_db, protein_fasta, cpu=cpu, evalue=evalue)
+        except FileNotFoundError as e:
+            print(f"  ERROR: {e}")
+            return
+        
+        # Run hmmscan
+        print(f"  Scanning {len(genes)} genes for Pfam domains...")
+        output_dir = Path(self.run_info['run_dir']) / 'domain_scan'
+        domtbl_file = scanner.scan_genes(genes, output_dir=str(output_dir))
+        
+        if not domtbl_file or not Path(domtbl_file).exists():
+            print("  ERROR: hmmscan failed")
+            return
+        
+        # Parse domain results
+        gene_domains = parse_domtbl(domtbl_file, evalue_threshold=evalue)
+        
+        print(f"  Found domains in {len(gene_domains)}/{len(genes)} genes")
+        
+        # Score based on category-specific expected domains
         scoring = self.config['scoring']
         caps = scoring['caps']
         match_score = scoring['weights'].get('domain_match', {}).get('hit', 2)
         
-        expected_domains = domain_config.get('expected_domains', {})
         all_matches = defaultdict(list)
         
-        for file_info in annotation_files:
-            file_path = Path(file_info['path'])
-            if not file_path.exists():
-                print(f"  WARNING: {file_path} not found, skipping")
+        for gene in genes:
+            if gene not in gene_domains:
                 continue
             
-            print(f"  Loading: {file_path.name}")
-            try:
-                df = pd.read_csv(file_path, sep="\t")
-            except:
-                print(f"  WARNING: Failed to read {file_path}")
-                continue
+            domains = gene_domains[gene]
+            category = gene_categories.get(gene, 'unknown')
             
-            id_col = file_info['id_column']
-            domain_cols = file_info.get('domain_columns', [])
-            database = file_info.get('database', 'unknown')
-            
-            # Map IDs
-            pattern = self.config['id_mapping']['protein_to_core_regex']
-            suffix = self.config['id_mapping']['seurat_suffix']
-            core_re = re.compile(pattern)
-            
-            df["core"] = df[id_col].astype(str).str.extract(core_re, expand=False)
-            df = df.dropna(subset=["core"])
-            df["seurat_gene"] = df["core"] + suffix
-            df = df[df['seurat_gene'].isin(genes)]
+            # Get expected domains for this category
+            if category == 'PCD':
+                expected = expected_domains_config.get('PCD', [])
+            elif category == 'ROS':
+                expected = expected_domains_config.get('ROS', [])
+            elif category == 'both':
+                expected = list(set(
+                    expected_domains_config.get('PCD', []) + 
+                    expected_domains_config.get('ROS', [])
+                ))
+            else:
+                # If no category, accept all expected domains
+                expected = list(set(
+                    expected_domains_config.get('PCD', []) + 
+                    expected_domains_config.get('ROS', [])
+                ))
             
             # Match domains
-            db_expected = expected_domains.get(database, [])
-            for gene in genes:
-                gene_rows = df[df['seurat_gene'] == gene]
-                for _, row in gene_rows.iterrows():
-                    for col in domain_cols:
-                        domain_val = str(row.get(col, ''))
-                        if pd.isna(domain_val) or domain_val == 'nan':
-                            continue
-                        for expected_id in db_expected:
-                            if expected_id in domain_val:
-                                all_matches[gene].append(f"{database}:{expected_id}")
+            for domain in domains:
+                pfam_id = domain['pfam_id']
+                if pfam_id in expected:
+                    pfam_name = domain['pfam_name']
+                    evalue = domain['evalue']
+                    all_matches[gene].append(f"{pfam_id}({pfam_name},E={evalue:.1e})")
         
         # Score genes
         for gene in genes:
-            matched = list(set(all_matches[gene]))
-            raw_score = len(matched) * match_score
+            matched = list(all_matches[gene])
+            n_unique_domains = len(set(m.split('(')[0] for m in matched))
+            raw_score = n_unique_domains * match_score
             capped_score = min(raw_score, caps['domain_max'])
             
             self.gene_scores_raw[gene]['domain'] = raw_score
@@ -438,9 +473,34 @@ class GeneSignatureRanker:
         
         raw_scores = [self.gene_scores_raw[g]['domain'] for g in genes]
         capped_scores = [self.gene_scores_capped[g]['domain'] for g in genes]
-        print(f"  Genes with domains: {sum(1 for s in raw_scores if s > 0)}")
-        print(f"  Raw: max={max(raw_scores):.1f}, mean={np.mean(raw_scores):.1f}")
-        print(f"  Capped (max={caps['domain_max']}): mean={np.mean(capped_scores):.1f}")
+        print(f"  Genes with expected domains: {sum(1 for s in raw_scores if s > 0)}")
+        if raw_scores:
+            print(f"  Raw: max={max(raw_scores):.1f}, mean={np.mean(raw_scores):.1f}")
+            print(f"  Capped (max={caps['domain_max']}): mean={np.mean(capped_scores):.1f}")
+    
+    def _categorize_genes(self, genes):
+        """Categorize genes as PCD, ROS, or both based on GO terms"""
+        categories = {}
+        
+        pcd_terms = set(self.config.get('go_categories', {}).get('PCD', []))
+        ros_terms = set(self.config.get('go_categories', {}).get('ROS', []))
+        
+        for gene in genes:
+            go_terms = set(self.gene_evidence[gene].get('go_terms', []))
+            
+            has_pcd = bool(go_terms & pcd_terms)
+            has_ros = bool(go_terms & ros_terms)
+            
+            if has_pcd and has_ros:
+                categories[gene] = 'both'
+            elif has_pcd:
+                categories[gene] = 'PCD'
+            elif has_ros:
+                categories[gene] = 'ROS'
+            else:
+                categories[gene] = 'unknown'
+        
+        return categories
     
     def _score_orthology_evidence(self, genes):
         """Score orthology with cap"""
@@ -759,6 +819,8 @@ class GeneSignatureRanker:
         # Create enriched HIGH overview table
         if len(high_confidence_genes) > 0:
             self._create_overview_table(high_conf_df, outputs_dir, suffix="HIGH")
+            # Create light HIGH category file
+            self._create_light_category_file(high_conf_df, outputs_dir)
         
         # Generate manifest
         self._generate_manifest(outputs_dir, len(genes), len(high_confidence_genes))
@@ -890,6 +952,55 @@ class GeneSignatureRanker:
         
         print(f"✓ QC plots in {qc_dir}/")
         print(f"✓ {report_file}")
+    
+    def _create_light_category_file(self, df_high_conf, outputs_dir):
+        """
+        Create light HIGH confidence file with just gene ID and category
+        
+        Args:
+            df_high_conf: DataFrame with high-confidence genes
+            outputs_dir: Output directory path
+        """
+        light_rows = []
+        
+        # Determine category from GO terms
+        gene_categories = self._categorize_genes(df_high_conf['brachy_gene_id'].tolist())
+        
+        for _, row in df_high_conf.iterrows():
+            gene = row['brachy_gene_id']
+            category = gene_categories.get(gene, 'unknown')
+            
+            # Use GO-based category, rename 'both' to 'PCD-ROS'
+            if category == 'both':
+                category = 'PCD-ROS'
+            elif category == 'unknown':
+                # If still unknown, check GO terms directly
+                evidence = self.gene_evidence[gene]
+                go_cats = evidence.get('go_categories', [])
+                if 'PCD' in go_cats and 'ROS' in go_cats:
+                    category = 'PCD-ROS'
+                elif 'PCD' in go_cats:
+                    category = 'PCD'
+                elif 'ROS' in go_cats:
+                    category = 'ROS'
+                else:
+                    category = 'PCD-ROS'  # Default if has GO terms but unclear
+            
+            light_rows.append({
+                'gene_id': gene,
+                'category': category
+            })
+        
+        df_light = pd.DataFrame(light_rows)
+        light_file = outputs_dir / f"{self.output_prefix}_genes.HIGH_category.tsv"
+        df_light.to_csv(light_file, sep="\t", index=False)
+        print(f"✓ {light_file.name} ({len(df_light)} genes)")
+        
+        # Print category counts
+        category_counts = df_light['category'].value_counts()
+        print(f"  Categories: {', '.join([f'{cat}={count}' for cat, count in category_counts.items()])}")
+        
+        return light_file
     
     def _create_overview_table(self, df_scored, outputs_dir, suffix="ALL"):
         """

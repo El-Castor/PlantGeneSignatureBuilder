@@ -1,0 +1,175 @@
+# ==============================================================================
+# Plant Gene Signature Scoring Configuration - FULL TEMPLATE (OFFLINE MODE)
+# ==============================================================================
+# All Arabidopsis functional context and protein domain evidence are retrieved
+# exclusively from local annotation resources (offline mode), without querying
+# external databases.
+#
+# Usage:
+#   python rank_gene_signatures.py --config config_scoring_full.yaml
+
+# Output file prefix
+output_prefix: "PCD_ROS_full"
+
+# GO annotation input
+input_go_file: "/path/to/GOannotation.tsv"
+
+# GO level filter (BP, MF, CC, or ALL)
+go_level_filter: "BP"
+
+# ID mapping rules
+id_mapping:
+  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
+  seurat_suffix: ".v1.2"
+
+# ==============================================================================
+# SCORE WEIGHTS
+# ==============================================================================
+
+score_weights:
+  
+  # GO term weights - Core PCD terms
+  go_core_terms:
+    GO:0012501: 3    # programmed cell death
+    GO:0008219: 3    # cell death
+    GO:0043067: 2    # regulation of programmed cell death
+    GO:0010941: 2    # regulation of cell death
+  
+  # GO term weights - ROS-related terms
+  go_ros_terms:
+    GO:0006979: 2    # response to oxidative stress
+    GO:0072593: 2    # reactive oxygen species metabolic process
+    GO:0045454: 2    # cell redox homeostasis
+  
+  # Orthology evidence
+  orthology:
+    best_hit_score_multiplier: 3
+    one_to_one_bonus: 2
+  
+  # Arabidopsis annotation keywords (from GFF3)
+  arabidopsis_keywords:
+    keyword_hit: 1
+    max_keyword_points: 6
+  
+  # PO/expression context (senescence stages)
+  po_context:
+    senescence_hit: 2
+    max_po_points: 4
+
+# ==============================================================================
+# EVIDENCE LAYERS
+# ==============================================================================
+
+evidence:
+  
+  # ------------------------------------------------------------------------
+  # Protein Domain Database (MANDATORY - OFFLINE MODE)
+  # ------------------------------------------------------------------------
+  # Define ALL local domain annotation files and expected domains here
+  
+domain_database:
+  enabled: false
+  
+  # List of domain annotation files (can be multiple)
+  annotation_files:
+    - path: "resources/domains/brachypodium_pfam.tsv"
+      database: "Pfam"
+      gene_id_column: "gene"          # Column with protein/gene ID
+      domain_column: "pfam_id"        # Column with Pfam IDs
+    
+    - path: "resources/domains/brachypodium_interpro.tsv"
+      database: "InterPro"
+      gene_id_column: "gene"
+      domain_column: "interpro_id"
+  
+  # Expected domains (mechanistically relevant to PCD/ROS)
+  expected_domains:
+    Pfam:
+      - "PF00656"   # Caspase domain
+      - "PF14743"   # Metacaspase
+      - "PF00112"   # Papain family cysteine protease
+      - "PF00141"   # Peroxidase
+      - "PF13460"   # NADPH oxidase
+      - "PF00089"   # Trypsin-like serine protease
+    
+    InterPro:
+      - "IPR029058"  # Caspase-like
+      - "IPR011600"  # Autophagy protein
+      - "IPR002016"  # Peroxidase
+      - "IPR000209"  # Peptidase C14, caspase domain
+  
+  # Scoring parameters
+  scoring:
+    match_score: 3              # Points per matched domain
+    max_domain_score: 12        # Cap on total domain score
+  
+  # ------------------------------------------------------------------------
+  # Orthology Evidence (Arabidopsis)
+  # ------------------------------------------------------------------------
+  
+  orthology_evidence:
+    enabled: false
+    
+    orthology_file: "/path/to/inParanoid_orthology.tsv"
+    
+    mapping_rules:
+      brachy_id_regex_extract: "BdiBd21-3\\.\\dG\\d{7}"
+      arabidopsis_id_regex_extract: "AT[1-5MC]G\\d{5}"
+  
+  # ------------------------------------------------------------------------
+  # Arabidopsis Functional Context (OFFLINE MODE - LOCAL GFF3 + PO)
+  # ------------------------------------------------------------------------
+  
+  arabidopsis_context:
+    enabled: false
+    
+    # Araport11 GFF3 file (MANDATORY for keyword scoring)
+    # Download from: https://www.arabidopsis.org/download_files/Genes/Araport11_genome_release/
+    gff3_file: "resources/arabidopsis/Araport11_TAIR10.1_symbol_description.gff3"
+    
+    # Keywords to search in Arabidopsis annotations
+    # Searches: symbol + curator_summary + full_name + computational_description
+    keywords:
+      - "cell death"
+      - "PCD"
+      - "programmed cell death"
+      - "metacaspase"
+      - "senescence"
+      - "autophagy"
+      - "hypersensitive"
+      - "HR"
+      - "ROS"
+      - "oxidative"
+      - "redox"
+      - "peroxidase"
+      - "cysteine protease"
+      - "serine protease"
+      - "protease"
+      - "caspase"
+  
+  # ------------------------------------------------------------------------
+  # PO/Expression Context (OFFLINE MODE)
+  # ------------------------------------------------------------------------
+  
+  po_context:
+    enabled: false
+    
+    # Arabidopsis PO annotation file
+    # Download from: https://www.arabidopsis.org/download_files/Ontologies/
+    po_annotation_file: "resources/arabidopsis/Arabidopsis_annotation.txt"
+    
+    # Senescence keywords detected automatically:
+    # - senescence, senescent, cell death, hypersensitive, dying, necrosis
+
+# ==============================================================================
+# SELECTION STRATEGY
+# ==============================================================================
+
+selection:
+  mode: "quantile"
+  quantile: 0.90
+  
+  # Alternative: knee detection
+  # mode: "knee"
+  # min_genes: 150
+  # max_genes: 350
