@@ -1,0 +1,167 @@
+# =============================================================================
+# Abiotic Stress Response Gene Signature - Capped Multi-Evidence Scoring v3.1
+# =============================================================================
+
+output_prefix: "abiotic_stress_scored"
+
+input_go_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/functionnal_annotation/fctionalAnno_Bd21-3_ownMethode/Bd21-3_v1.2/GOannotation.tsv"
+
+go_level_filter: "BP"
+
+id_mapping:
+  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
+  seurat_suffix: ".v1.2"
+
+# =============================================================================
+# SCORING CONFIGURATION - CAPS + WEIGHTS + SYNERGY
+# =============================================================================
+scoring:
+  
+  # --- CAPS (prevent dominance of any single layer) ---
+  caps:
+    go_max: 15
+    domain_max: 10
+    orthology_max: 6
+    tair_max: 20
+    po_max: 4
+    synergy_max: 6
+  
+  # --- WEIGHTS (how to score within each layer) ---
+  weights:
+    
+    # GO term weights by stress category
+    go:
+      Drought:
+        "GO:0009414": 3  # response to water deprivation
+        "GO:0042538": 2  # hyperosmotic salinity response
+        "GO:0071472": 2  # cellular response to salt stress
+        "GO:0010200": 2  # response to chitin
+      
+      Heat:
+        "GO:0009408": 3  # response to heat
+        "GO:0034605": 2  # cellular response to heat
+        "GO:0009644": 2  # response to high light intensity
+      
+      Cold:
+        "GO:0009409": 3  # response to cold
+        "GO:0050826": 2  # response to freezing
+        "GO:0070417": 2  # cellular response to cold
+      
+      Salt:
+        "GO:0009651": 3  # response to salt stress
+        "GO:0071472": 2  # cellular response to salt stress
+        "GO:0042538": 2  # hyperosmotic salinity response
+      
+      Oxidative:
+        "GO:0006979": 3  # response to oxidative stress
+        "GO:0000302": 2  # response to reactive oxygen species
+        "GO:0042542": 2  # response to hydrogen peroxide
+    
+    domain_match:
+      hit: 2
+    
+    orthology:
+      best_hit_multiplier: 3
+      one_to_one_bonus: 2
+      min_best_score_for_points: 0.5
+    
+    tair_keywords:
+      hit: 2
+    
+    po_keywords:
+      hit: 1
+  
+  # --- SYNERGY RULES ---
+  synergy_rules:
+    - name: "stress_GO+domain"
+      if_all:
+        - "has_Drought_GO or has_Heat_GO or has_Cold_GO or has_Salt_GO or has_Oxidative_GO"
+        - "has_expected_domain"
+      bonus: 3
+    
+    - name: "stress_GO+TAIR"
+      if_all:
+        - "has_Drought_GO or has_Heat_GO or has_Cold_GO or has_Salt_GO or has_Oxidative_GO"
+        - "tair_keyword_hits>=1"
+      bonus: 2
+
+# =============================================================================
+# DOMAIN DATABASE
+# =============================================================================
+domain_database:
+  enabled: true
+  
+  pfam_database: "resources/domains/pfam/Pfam-A.hmm"
+  protein_fasta: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/Phytozome/PhytozomeV13/BdistachyonBd21-3/v1.2/annotation/BdistachyonBd21_3_537_v1.2.protein.fa"
+  
+  evalue_threshold: 1e-5
+  cpu: 4
+  
+  # Expected domains for stress responses
+  expected_domains:
+    Drought:
+      - "PF00931"  # NB-ARC (stress signaling)
+      - "PF00069"  # Protein kinase (stress signaling)
+      - "PF13855"  # LRR_8 (receptors)
+      - "PF13639"  # Ring finger (ubiquitination, protein degradation)
+      - "PF00651"  # BTB/POZ (protein-protein interaction)
+    
+    Heat:
+      - "PF00012"  # HSP70 (heat shock protein)
+      - "PF00183"  # HSP90 (heat shock protein)
+      - "PF13927"  # sHSP (small heat shock protein)
+      - "PF00011"  # HSP20 (molecular chaperone)
+    
+    Cold:
+      - "PF00313"  # COR (cold-regulated protein)
+      - "PF03141"  # LEA_2 (late embryogenesis abundant)
+      - "PF02987"  # Late_embryo_abund (stress protection)
+    
+    Salt:
+      - "PF00520"  # Ion_trans (ion transporter)
+      - "PF00999"  # Na_H_Exchanger (sodium/proton antiporter)
+      - "PF00413"  # K_trans (potassium transporter)
+    
+    Oxidative:
+      - "PF00141"  # Peroxidase
+      - "PF00199"  # Catalase
+      - "PF00067"  # Cytochrome P450
+      - "PF00355"  # Rieske (electron transport)
+
+# =============================================================================
+# EVIDENCE LAYERS
+# =============================================================================
+evidence:
+  
+  orthology_evidence:
+    enabled: true
+    orthology_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/Phytozome/PhytozomeV13/BdistachyonBd21-3/v1.2/orthology/inparanoid_BdistachyonBd21_3_537_v1.2/inParanoid_BdistachyonBd21_3_537_v1.2_Athaliana_447_Araport11.tsv"
+    
+    mapping_rules:
+      brachy_id_regex_extract: "BdiBd21-3\\.\\dG\\d{7}"
+      arabidopsis_id_regex_extract: "AT[1-5MC]G\\d{5}"
+  
+  arabidopsis_context:
+    enabled: false
+    
+    gff3_file: "resources/arabidopsis/Araport11_GFF3_genes_transposons.20250813.gff"
+    po_annotation_file: "resources/arabidopsis/Arabidopsis_annotation_gene.txt"
+    
+    keywords:
+      - "drought"
+      - "heat shock"
+      - "cold"
+      - "salt"
+      - "osmotic"
+      - "dehydration"
+      - "freezing"
+  
+  po_context:
+    enabled: false
+
+# =============================================================================
+# SELECTION METHOD
+# =============================================================================
+selection:
+  mode: "quantile"
+  quantile: 0.90

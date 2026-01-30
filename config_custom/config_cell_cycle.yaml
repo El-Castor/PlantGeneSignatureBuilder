@@ -1,8 +1,8 @@
 # =============================================================================
-# Photosynthesis Gene Signature - Capped Multi-Evidence Scoring v3.1
+# Cell Cycle & Division Gene Signature - Capped Multi-Evidence Scoring v3.1
 # =============================================================================
 
-output_prefix: "photosynthesis_scored"
+output_prefix: "cell_cycle_scored"
 
 input_go_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/functionnal_annotation/fctionalAnno_Bd21-3_ownMethode/Bd21-3_v1.2/GOannotation.tsv"
 
@@ -28,28 +28,29 @@ scoring:
   weights:
     
     go:
-      Light_Reactions:
-        "GO:0019684": 3  # photosynthesis, light reaction
-        "GO:0009768": 3  # photosynthesis, light harvesting in photosystem I
-        "GO:0009769": 3  # photosynthesis, light harvesting in photosystem II
-        "GO:0009772": 2  # photosynthetic electron transport in photosystem II
-        "GO:0009773": 2  # photosynthetic electron transport in photosystem I
+      Mitosis:
+        "GO:0000278": 3  # mitotic cell cycle
+        "GO:0007067": 3  # mitotic nuclear division
+        "GO:0051301": 2  # cell division
+        "GO:0000280": 2  # nuclear division
       
-      Carbon_Fixation:
-        "GO:0015977": 3  # carbon fixation
-        "GO:0019253": 2  # reductive pentose-phosphate cycle
-        "GO:0009853": 2  # photorespiration
+      Meiosis:
+        "GO:0051321": 3  # meiotic cell cycle
+        "GO:0007126": 3  # meiotic nuclear division
+        "GO:0140013": 2  # meiotic nuclear division
       
-      Chloroplast:
-        "GO:0009658": 2  # chloroplast organization
-        "GO:0009902": 2  # chloroplast relocation
-        "GO:0010027": 2  # thylakoid membrane organization
+      Cytokinesis:
+        "GO:0000910": 3  # cytokinesis
+        "GO:0032465": 2  # regulation of cytokinesis
+        "GO:0061952": 2  # midbody
       
-      Pigment_Biosynthesis:
-        "GO:0015995": 2  # chlorophyll biosynthetic process
-        "GO:0009416": 2  # response to light stimulus
-        "GO:0009637": 2  # response to blue light
-        "GO:0009639": 2  # response to red or far red light
+      Cell_Cycle_Regulation:
+        "GO:0051726": 3  # regulation of cell cycle
+        "GO:0010564": 2  # regulation of cell cycle process
+        "GO:0045786": 2  # negative regulation of cell cycle
+        "GO:0045787": 2  # positive regulation of cell cycle
+        "GO:0000082": 2  # G1/S transition of mitotic cell cycle
+        "GO:0000086": 2  # G2/M transition of mitotic cell cycle
     
     domain_match:
       hit: 2
@@ -66,9 +67,9 @@ scoring:
       hit: 1
   
   synergy_rules:
-    - name: "photosynthesis_GO+domain"
+    - name: "cell_cycle_GO+domain"
       if_all:
-        - "has_Light_Reactions_GO or has_Carbon_Fixation_GO or has_Chloroplast_GO or has_Pigment_Biosynthesis_GO"
+        - "has_Mitosis_GO or has_Meiosis_GO or has_Cytokinesis_GO or has_Cell_Cycle_Regulation_GO"
         - "has_expected_domain"
       bonus: 3
 
@@ -85,30 +86,28 @@ domain_database:
   cpu: 4
   
   expected_domains:
-    Light_Reactions:
-      - "PF00223"  # Photosystem I psaA/B
-      - "PF00124"  # Photosystem I psaG
-      - "PF00421"  # Photosystem II protein D1
-      - "PF06514"  # Photosystem II reaction center protein J
-      - "PF00556"  # Cytochrome b5-like
-      - "PF00510"  # Cytochrome c
+    Mitosis:
+      - "PF00149"  # Cyclin (cell cycle regulator)
+      - "PF00069"  # Protein kinase (CDKs)
+      - "PF02984"  # Cyclin_C (cyclin C-terminal)
+      - "PF00400"  # WD40 (cell cycle proteins)
+      - "PF08646"  # Separase (chromosome segregation)
     
-    Carbon_Fixation:
-      - "PF00016"  # Ribulose bisphosphate carboxylase (RuBisCO)
-      - "PF02788"  # RuBisCO large subunit
-      - "PF00101"  # Ribulose phosphate binding barrel
-      - "PF00342"  # Phosphoglycerate kinase
+    Meiosis:
+      - "PF03962"  # REC8 (meiotic cohesin)
+      - "PF04504"  # SPO11 (meiotic recombination)
+      - "PF14295"  # MSH4 (meiotic recombination)
     
-    Chloroplast:
-      - "PF01036"  # Chloroplast import apparatus
-      - "PF03966"  # Trk (chloroplast potassium channel)
-      - "PF14559"  # TPR_19 (tetratricopeptide repeat, chloroplast protein import)
+    Cytokinesis:
+      - "PF00225"  # Kinesin motor (chromosome/vesicle transport)
+      - "PF00022"  # Actin (cytoskeleton)
+      - "PF00350"  # Dynamin (membrane fission)
     
-    Pigment_Biosynthesis:
-      - "PF00289"  # Mg-chelatase (chlorophyll biosynthesis)
-      - "PF01208"  # Uroporphyrinogen decarboxylase (chlorophyll pathway)
-      - "PF00590"  # Tetrapyrrole biosynthesis
-      - "PF01715"  # CHLI (chlorophyll biosynthesis)
+    Cell_Cycle_Regulation:
+      - "PF00646"  # F-box (SCF E3 ubiquitin ligase)
+      - "PF12937"  # F-box-like
+      - "PF00023"  # Ankyrin repeat (regulatory proteins)
+      - "PF13637"  # Ankyrin repeats
 
 # =============================================================================
 # EVIDENCE LAYERS
@@ -130,12 +129,12 @@ evidence:
     po_annotation_file: "resources/arabidopsis/Arabidopsis_annotation_gene.txt"
     
     keywords:
-      - "photosynthesis"
-      - "chloroplast"
-      - "photosystem"
-      - "RuBisCO"
-      - "thylakoid"
-      - "chlorophyll"
+      - "mitosis"
+      - "meiosis"
+      - "cell cycle"
+      - "cytokinesis"
+      - "cyclin"
+      - "CDK"
   
   po_context:
     enabled: false

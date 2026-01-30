@@ -1,143 +1,130 @@
 # Custom Gene Signature Configurations
 
-This directory contains example configuration files for different biological gene signatures.
+This directory contains custom configuration files for different biological processes.
 
-These configs are designed for the **v1.0 simple extraction system** (`create_list_from_GAF.py`).
-
-For the **v3.0 scoring system** (`rank_gene_signatures.py`), use the templates in the main directory.
+Each config file is tailored for the **v3.1 scoring system** (`rank_gene_signatures.py`) and includes:
+- Category-specific GO terms and weights
+- Expected Pfam domains for each category
+- Synergy rules for multi-evidence validation
+- Domain scanning integration with hmmscan
 
 ---
 
-## Available Signatures
+## Available Configurations
 
-### 1. PCD/ROS Genes
-**File:** `config_PCD_ROS.yaml`
+### Development
+**File:** `config_embryogenesis.yaml`
+
+**Categories:** Embryo_Development, Zygote_Formation, Cell_Fate
 
 **GO Terms:**
-- Programmed cell death (GO:0012501)
-- Cell death (GO:0008219)
-- Regulation of programmed cell death (GO:0043067)
-- Regulation of cell death (GO:0010941)
-- Response to oxidative stress (GO:0006979)
-- ROS metabolic process (GO:0072593)
-- Cell redox homeostasis (GO:0045454)
+- Embryo development (GO:0009790)
+- Zygote formation (GO:0000381)
+- Cell fate determination (GO:0001709)
+- Pattern specification (GO:0007389)
+- And 13 more developmental GO terms
 
-**Use:** PCD and oxidative stress response studies
+**Use:** Embryogenesis and early development studies
 
 ---
 
-### 2. PCD + General Stress
-**File:** `config_PCD_stress.yaml`
+### Stress Responses
+**File:** `config_abiotic_stress.yaml`
 
-Includes PCD/ROS terms plus:
+**Categories:** Drought, Heat, Cold, Salt, Oxidative
+
+**GO Terms:**
+- Response to water deprivation (GO:0009414)
 - Response to heat (GO:0009408)
 - Response to cold (GO:0009409)
-- Response to hydrogen peroxide (GO:0042542)
+- Response to salt stress (GO:0009651)
+- Response to oxidative stress (GO:0006979)
+- And more stress-specific terms
 
-**Use:** Broader stress response analysis
+**Expected Domains:**
+- HSP70, HSP90 (heat stress)
+- LEA proteins (cold/drought)
+- Ion transporters (salt stress)
+- Peroxidases, catalases (oxidative stress)
+
+**Use:** Abiotic stress tolerance studies
 
 ---
 
-### 3. Cell Division
-**File:** `config_cell_division.yaml`
+### Cell Biology
+**File:** `config_cell_cycle.yaml`
+
+**Categories:** Mitosis, Meiosis, Cytokinesis, Cell_Cycle_Regulation
 
 **GO Terms:**
-- Cell division (GO:0051301)
 - Mitotic cell cycle (GO:0000278)
+- Meiotic cell cycle (GO:0051321)
+- Cytokinesis (GO:0000910)
 - Regulation of cell cycle (GO:0051726)
+- G1/S and G2/M transitions
 
-**Use:** Cell cycle and proliferation studies
+**Expected Domains:**
+- Cyclins (PF00149)
+- Protein kinases (CDKs)
+- Kinesin motors
+- F-box proteins (cell cycle regulators)
+
+**Use:** Cell division and proliferation studies
 
 ---
 
-### 4. Photosynthesis
+### Metabolism
 **File:** `config_photosynthesis.yaml`
 
-**GO Terms:**
-- Photosynthesis (GO:0015979)
-- Photosynthesis, light reaction (GO:0019684)
-- Photosynthesis, dark reaction (GO:0019685)
+**Categories:** Light_Reactions, Carbon_Fixation, Chloroplast, Pigment_Biosynthesis
 
-**Use:** Photosynthetic pathway analysis
+**GO Terms:**
+- Photosynthesis light reactions (GO:0019684)
+- Carbon fixation (GO:0015977)
+- Chloroplast organization (GO:0009658)
+- Chlorophyll biosynthesis (GO:0015995)
+
+**Expected Domains:**
+- Photosystem I/II proteins
+- RuBisCO
+- Cytochrome b5
+- Mg-chelatase (chlorophyll biosynthesis)
+
+**Use:** Photosynthesis and chloroplast function studies
 
 ---
 
 ## Usage
 
-### With v1.0 Simple Extraction
 ```bash
-python create_list_from_GAF.py --config config_custom/config_PCD_ROS.yaml
+# Embryogenesis
+conda run -n wot_env python rank_gene_signatures.py \
+  --config config_custom/config_embryogenesis.yaml \
+  --run_name embryogenesis
+
+# Abiotic stress
+conda run -n wot_env python rank_gene_signatures.py \
+  --config config_custom/config_abiotic_stress.yaml \
+  --run_name abiotic_stress
+
+# Cell cycle
+conda run -n wot_env python rank_gene_signatures.py \
+  --config config_custom/config_cell_cycle.yaml \
+  --run_name cell_cycle
+
+# Photosynthesis
+conda run -n wot_env python rank_gene_signatures.py \
+  --config config_custom/config_photosynthesis.yaml \
+  --run_name photosynthesis
 ```
 
-### Migrating to v3.0 Scoring System
+## Output Files
 
-To use with the scoring system, convert format:
+Each run generates:
+- `{prefix}_scored_genes.base.txt` - All genes with target GO terms
+- `{prefix}_scored_genes.scored.tsv` - Full scoring breakdown
+- `{prefix}_scored_genes.ALL_overview.tsv` - Complete overview
+- `{prefix}_scored_genes.HIGH_overview.tsv` - High-confidence genes (top 10%)
+- `{prefix}_scored_genes.HIGH_category.tsv` - Gene IDs with category labels
 
-**OLD (v1.0):**
-```yaml
-go_terms:
-  - go_id: "GO:0012501"
-    description: "programmed cell death"
-    category: "PCD"
-```
-
-**NEW (v3.0):**
-```yaml
-score_weights:
-  go_core_terms:
-    GO:0012501: 3  # programmed cell death
-```
-
-See `config_scoring_template.yaml` in main directory for v3.0 format.
-
----
-
-## Creating Custom Signatures
-
-1. Copy an existing config:
-```bash
-cp config_custom/config_PCD_ROS.yaml config_custom/config_my_signature.yaml
-```
-
-2. Edit GO terms for your pathway of interest
-
-3. Run extraction:
-```bash
-python create_list_from_GAF.py --config config_custom/config_my_signature.yaml
-```
-
----
-
-## File Format (v1.0)
-
-```yaml
-output_prefix: "my_genes"
-
-input_go_file: "/path/to/GOannotation.tsv"
-
-id_mapping:
-  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
-  seurat_suffix: ".v1.2"
-
-go_level_filter: "BP"
-
-go_terms:
-  - go_id: "GO:xxxxxxx"
-    description: "term description"
-    category: "category_name"
-```
-
----
-
-## Converting to v3.0
-
-For multi-evidence scoring with domains, orthology, and Arabidopsis context:
-
-```bash
-# Use v3.0 templates
-cp config_scoring_template.yaml config_my_scoring.yaml
-
-# Add your GO terms to score_weights section
-# Enable evidence layers as needed
-python rank_gene_signatures.py --config config_my_scoring.yaml
-```
+The HIGH_category.tsv file shows which category(ies) each gene belongs to based on GO terms.
