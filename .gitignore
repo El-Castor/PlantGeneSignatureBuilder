@@ -47,7 +47,12 @@ resources/domains/pfam/*.h3p
 *.domtbl
 *_extract.fa
 *_protein.fa
-domain_*.log
+
+# Logs and backups
+logs/
+backups/
 
 # Results and run outputs
 results/
+*_scored_genes.*.txt
+*_scored_genes.*.tsv
