@@ -479,26 +479,32 @@ class GeneSignatureRanker:
             print(f"  Capped (max={caps['domain_max']}): mean={np.mean(capped_scores):.1f}")
     
     def _categorize_genes(self, genes):
-        """Categorize genes as PCD, ROS, or both based on GO terms"""
+        """Categorize genes based on GO term categories from config"""
         categories = {}
         
-        pcd_terms = set(self.config.get('go_categories', {}).get('PCD', []))
-        ros_terms = set(self.config.get('go_categories', {}).get('ROS', []))
+        # Get all GO categories from config
+        go_weights = self.config.get('scoring', {}).get('weights', {}).get('go', {})
+        category_terms = {}
+        for category_name, terms_dict in go_weights.items():
+            category_terms[category_name] = set(terms_dict.keys())
         
         for gene in genes:
             go_terms = set(self.gene_evidence[gene].get('go_terms', []))
             
-            has_pcd = bool(go_terms & pcd_terms)
-            has_ros = bool(go_terms & ros_terms)
+            # Find which categories this gene belongs to
+            gene_categories = []
+            for cat_name, cat_terms in category_terms.items():
+                if go_terms & cat_terms:
+                    gene_categories.append(cat_name)
             
-            if has_pcd and has_ros:
-                categories[gene] = 'both'
-            elif has_pcd:
-                categories[gene] = 'PCD'
-            elif has_ros:
-                categories[gene] = 'ROS'
-            else:
+            # Assign category
+            if len(gene_categories) == 0:
                 categories[gene] = 'unknown'
+            elif len(gene_categories) == 1:
+                categories[gene] = gene_categories[0]
+            else:
+                # Multiple categories: join with '-'
+                categories[gene] = '-'.join(sorted(gene_categories))
         
         return categories
     
@@ -969,22 +975,6 @@ class GeneSignatureRanker:
         for _, row in df_high_conf.iterrows():
             gene = row['brachy_gene_id']
             category = gene_categories.get(gene, 'unknown')
-            
-            # Use GO-based category, rename 'both' to 'PCD-ROS'
-            if category == 'both':
-                category = 'PCD-ROS'
-            elif category == 'unknown':
-                # If still unknown, check GO terms directly
-                evidence = self.gene_evidence[gene]
-                go_cats = evidence.get('go_categories', [])
-                if 'PCD' in go_cats and 'ROS' in go_cats:
-                    category = 'PCD-ROS'
-                elif 'PCD' in go_cats:
-                    category = 'PCD'
-                elif 'ROS' in go_cats:
-                    category = 'ROS'
-                else:
-                    category = 'PCD-ROS'  # Default if has GO terms but unclear
             
             light_rows.append({
                 'gene_id': gene,

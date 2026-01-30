@@ -1,0 +1,180 @@
+# =============================================================================
+# Embryogenic Fate Gene Signature - Capped Multi-Evidence Scoring v3.1
+# =============================================================================
+
+output_prefix: "embryogenesis_scored"
+
+input_go_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/functionnal_annotation/fctionalAnno_Bd21-3_ownMethode/Bd21-3_v1.2/GOannotation.tsv"
+
+go_level_filter: "BP"
+
+id_mapping:
+  protein_to_core_regex: "^(BdiBd21-3\\.\\dG\\d{7})"
+  seurat_suffix: ".v1.2"
+
+# =============================================================================
+# SCORING CONFIGURATION - CAPS + WEIGHTS + SYNERGY
+# =============================================================================
+scoring:
+  
+  # --- CAPS (prevent dominance of any single layer) ---
+  caps:
+    go_max: 15           # Max points from GO terms
+    domain_max: 10       # Max points from domain matches
+    orthology_max: 6     # Max points from orthology evidence
+    tair_max: 20         # Max points from Arabidopsis keyword matches
+    po_max: 4            # Max points from PO context
+    synergy_max: 6       # Max points from synergy bonuses
+  
+  # --- WEIGHTS (how to score within each layer) ---
+  weights:
+    
+    # GO term weights by category
+    go:
+      Embryo_Development:
+        "GO:0009790": 3  # embryo development
+        "GO:0009793": 3  # embryo development ending in seed dormancy
+        "GO:0010262": 2  # somatic embryogenesis
+        "GO:0071555": 2  # cell wall organization
+        "GO:0010344": 2  # seed oilbody biogenesis
+        "GO:0048316": 2  # seed development
+      
+      Zygote_Formation:
+        "GO:0000003": 3  # reproduction
+        "GO:0009566": 3  # fertilization
+        "GO:0007276": 2  # gamete generation
+        "GO:0048229": 2  # gametophyte development
+        "GO:0048366": 2  # leaf development (post-embryonic)
+      
+      Cell_Fate:
+        "GO:0001708": 3  # cell fate specification
+        "GO:0001709": 2  # cell fate determination
+        "GO:0009987": 2  # cellular process
+        "GO:0048869": 2  # cellular developmental process
+        "GO:0030154": 2  # cell differentiation
+        "GO:0009888": 2  # tissue development
+    
+    # Domain matches
+    domain_match:
+      hit: 2  # Points per expected domain match
+    
+    # Orthology scoring
+    orthology:
+      best_hit_multiplier: 3
+      one_to_one_bonus: 2
+      min_best_score_for_points: 0.5
+    
+    # Arabidopsis keyword matches
+    tair_keywords:
+      hit: 2
+    
+    # PO context matches
+    po_keywords:
+      hit: 1
+  
+  # --- SYNERGY RULES ---
+  synergy_rules:
+    - name: "embryo_GO+domain"
+      if_all:
+        - "has_Embryo_Development_GO"
+        - "has_expected_domain"
+      bonus: 3
+    
+    - name: "embryo_GO+TAIR_keywords"
+      if_all:
+        - "has_Embryo_Development_GO"
+        - "tair_keyword_hits>=1"
+      bonus: 2
+
+# =============================================================================
+# DOMAIN DATABASE (Pfam domain scanning with hmmscan)
+# =============================================================================
+domain_database:
+  enabled: true
+  
+  # Pfam database and protein sequences
+  pfam_database: "resources/domains/pfam/Pfam-A.hmm"
+  protein_fasta: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/Phytozome/PhytozomeV13/BdistachyonBd21-3/v1.2/annotation/BdistachyonBd21_3_537_v1.2.protein.fa"
+  
+  # hmmscan parameters
+  evalue_threshold: 1e-5
+  cpu: 4
+  
+  # Expected domains per category (Pfam IDs for embryogenesis)
+  expected_domains:
+    Embryo_Development:
+      - "PF00010"  # Helix-loop-helix DNA-binding domain (transcription factors)
+      - "PF00046"  # Homeobox domain (developmental TFs)
+      - "PF03106"  # WRKY DNA-binding domain
+      - "PF00249"  # Myb DNA-binding domain
+      - "PF00642"  # Zinc finger C-x8-C-x5-C-x3-H type
+      - "PF00170"  # bZIP transcription factor
+      - "PF00313"  # 'Cold-shock' DNA-binding domain
+    
+    Zygote_Formation:
+      - "PF01234"  # Cysteine-rich secretory protein (gamete recognition)
+      - "PF00400"  # WD domain (cell cycle, signal transduction)
+      - "PF08744"  # EMBRYO DEFECTIVE (plant-specific)
+      - "PF00069"  # Protein kinase domain
+    
+    Cell_Fate:
+      - "PF00560"  # LRR domain (cell-cell signaling)
+      - "PF00931"  # NB-ARC (developmental signaling)
+      - "PF01535"  # PPR repeat (organellar gene expression)
+      - "PF13041"  # PPR repeat family
+
+# =============================================================================
+# EVIDENCE LAYERS
+# =============================================================================
+evidence:
+  
+  # --- Orthology Evidence (ENABLED) ---
+  orthology_evidence:
+    enabled: true
+    orthology_file: "/Users/clpichot/Documents/BIO-INFO/GENOMES/Brachypodium_distachyon/Phytozome/PhytozomeV13/BdistachyonBd21-3/v1.2/orthology/inparanoid_BdistachyonBd21_3_537_v1.2/inParanoid_BdistachyonBd21_3_537_v1.2_Athaliana_447_Araport11.tsv"
+    
+    mapping_rules:
+      brachy_id_regex_extract: "BdiBd21-3\\.\\dG\\d{7}"
+      arabidopsis_id_regex_extract: "AT[1-5MC]G\\d{5}"
+  
+  # --- Arabidopsis Context ---
+  arabidopsis_context:
+    enabled: true
+    
+    # GFF3 file for gene symbols
+    gff3_file: "resources/arabidopsis/Araport11_GFF3_genes_transposons.20250813.gff"
+    
+    # PO annotation file for embryo-related contexts
+    po_annotation_file: "resources/arabidopsis/Arabidopsis_annotation_gene.txt"
+    
+    # Keywords to look for in Arabidopsis annotations
+    tair_keywords:
+      - "embryo"
+      - "zygote"
+      - "embryonic"
+      - "embryogenesis"
+      - "somatic embryo"
+      - "seed development"
+      - "gamete"
+      - "fertilization"
+      - "proembryo"
+      - "globular"
+      - "suspensor"
+    
+    # PO contexts for embryo development stages
+    po_contexts:
+      - "PO:0007631"  # plant embryo stage
+      - "PO:0001180"  # B proembryo stage
+      - "PO:0001081"  # F mature embryo stage
+      - "PO:0001185"  # globular embryo stage
+      - "PO:0004507"  # heart embryo stage
+      - "PO:0001017"  # embryo sac
+
+# =============================================================================
+# OUTPUT AND THRESHOLDS
+# =============================================================================
+thresholds:
+  high_confidence_min: 7.0
+  
+selection:
+  output_top_n: null  # null = select by threshold only
